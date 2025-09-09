@@ -159,6 +159,7 @@ export const followOrUnfollow = async (req, res) => {
   try {
     const userId = req.id;
     const targetUserId = req.params.id;
+
     if (userId === targetUserId) {
       return res
         .status(400)
@@ -172,30 +173,28 @@ export const followOrUnfollow = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const isFollowing = user.following.includes(targetUserId);
+    // Fix ObjectId comparison
+    const isFollowing = user.following.some(
+      (id) => id.toString() === targetUserId
+    );
 
     if (isFollowing) {
       await Promise.all([
-        user.updateOne({ _id: userId }, { $pull: { following: targetUserId } }),
-        targetUser.updateOne(
-          { _id: targetUserId },
-          { $pull: { followers: userId } }
-        ),
+        User.findByIdAndUpdate(userId, { $pull: { following: targetUserId } }),
+        User.findByIdAndUpdate(targetUserId, { $pull: { followers: userId } }),
       ]);
 
-      res.status(200).json({ message: "Unfollowed successfully" });
+      return res.status(200).json({ message: "Unfollowed successfully" });
     } else {
       await Promise.all([
-        user.updateOne({ _id: userId }, { $push: { following: targetUserId } }),
-        targetUser.updateOne(
-          { _id: targetUserId },
-          { $push: { followers: userId } }
-        ),
+        User.findByIdAndUpdate(userId, { $push: { following: targetUserId } }),
+        User.findByIdAndUpdate(targetUserId, { $push: { followers: userId } }),
       ]);
 
-      res.status(200).json({ message: "Followed successfully" });
+      return res.status(200).json({ message: "Followed successfully" });
     }
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };

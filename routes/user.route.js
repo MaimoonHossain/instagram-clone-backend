@@ -15,11 +15,11 @@ const router = express.Router();
 
 router.route("/register").post(register);
 router.route("/login").post(login);
-router.route("/logout").post(logout);
+router.route("/logout").get(logout);
 router.route("/profile/:id").get(isAuthenticated, getProfile);
 router
   .route("/update-profile")
-  .put(isAuthenticated, upload.single("profilePicture"), updateProfile);
+  .patch(isAuthenticated, upload.single("profilePicture"), updateProfile);
 router.route("/suggestions").get(isAuthenticated, getSuggestedUsers);
 router.route("/follow-or-unfollow/:id").post(isAuthenticated, followOrUnfollow);
 
