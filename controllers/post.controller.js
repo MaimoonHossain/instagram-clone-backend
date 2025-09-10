@@ -103,7 +103,7 @@ export const getUserPost = async (req, res) => {
   }
 };
 
-export const likePost = async (req, res) => {
+export const likeOrUnlikePost = async (req, res) => {
   try {
     const userId = req.id;
     const postId = req.params.id;
@@ -201,6 +201,32 @@ export const deletePost = async (req, res) => {
     await Comment.deleteMany({ post: postId });
 
     res.status(200).json({ message: "Post deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const bookmarkPost = async (req, res) => {
+  try {
+    const userId = req.id;
+    const postId = req.params.id;
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (user.bookmarks.includes(postId)) {
+      user.bookmarks.pull(postId);
+    } else {
+      user.bookmarks.push(postId);
+    }
+
+    await user.save();
+
+    res.status(200).json({ message: "Post bookmarked/unbookmarked", user });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
