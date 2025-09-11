@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import getDataUri from "../utils/dataUri.js";
 import cloudinary from "../utils/cloudinary.js";
+import Post from "../models/post.model.js";
 
 export const register = async (req, res) => {
   try {
@@ -54,12 +55,15 @@ export const login = async (req, res) => {
       expiresIn: "1d",
     });
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "None",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-      secure: true,
-    });
+    const populatedPosts = await Promise.all(
+      user.posts.map(async (postId) => {
+        const post = await Post.findById(postId);
+        if (post.author.equals(user._id)) {
+          return post;
+        }
+        return null;
+      })
+    );
 
     const userData = {
       _id: user._id,
@@ -69,9 +73,17 @@ export const login = async (req, res) => {
       bio: user.bio,
       followers: user.followers,
       following: user.following,
-      posts: user.posts,
+      posts: populatedPosts,
       bookmarks: user.bookmarks,
     };
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      secure: true,
+    });
+
     res
       .status(200)
       .json({ message: "Login successful", user: userData, token });
