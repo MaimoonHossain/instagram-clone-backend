@@ -110,6 +110,7 @@ export const likeOrUnlikePost = async (req, res) => {
     const postId = req.params.id;
 
     const post = await Post.findById(postId);
+    let liked = false;
 
     if (!post) {
       return res.status(404).json({ message: "Post not found" });
@@ -121,9 +122,36 @@ export const likeOrUnlikePost = async (req, res) => {
     } else {
       // User hasn't liked the post yet, so like it
       post.likes.push(userId);
+      liked = true;
     }
 
     await post.save();
+
+    const user = await User.findById(userId).select("username profilePicture");
+    const postOwnerId = post.author.toString();
+    if (postOwnerId !== userId) {
+      if (liked) {
+        const notification = {
+          type: "like",
+          userId,
+          userDetails: user,
+          postId,
+          message: "Your post was liked",
+        };
+        const postOwnerSocketId = getReceiverSocketId(postOwnerId);
+        io.to(postOwnerSocketId).emit("notification", notification);
+      } else {
+        const notification = {
+          type: "dislike",
+          userId,
+          userDetails: user,
+          postId,
+          message: "Your post was disliked",
+        };
+        const postOwnerSocketId = getReceiverSocketId(postOwnerId);
+        io.to(postOwnerSocketId).emit("notification", notification);
+      }
+    }
 
     res.status(200).json({ message: "Post liked/unliked successfully", post });
   } catch (error) {
